@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sancifex - AI Voice Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0a0e1a;
+            color: #fff;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at 30% 20%, rgba(88, 166, 255, 0.15) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 14, 26, 0.6);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            position: relative;
+            z-index: 102;
+        }
+
+        .menu-toggle span {
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background: #fff;
+            left: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle span:nth-child(1) { top: 8px; }
+        .menu-toggle span:nth-child(2) { top: 14px; }
+        .menu-toggle span:nth-child(3) { top: 20px; }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg);
+            top: 14px;
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg);
+            top: 14px;
+        }
+
+        .drawer {
+            position: fixed;
+            right: -300px;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: rgba(10, 14, 26, 0.95);
+            backdrop-filter: blur(30px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 5rem 2rem;
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 101;
+        }
+
+        .drawer.open {
+            right: 0;
+        }
+
+        .drawer nav a {
+            display: block;
+            padding: 1rem 0;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .drawer nav a:hover {
+            color: #fff;
+            padding-left: 1rem;
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 8rem 2rem 4rem;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 200;
+            letter-spacing: -2px;
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+        }
+
+        .hero h1 strong {
+            font-weight: 500;
+            display: block;
+            background: linear-gradient(135deg, #58a6ff 0%, #8a2be2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: rgba(255, 255, 255, 0.6);
+            max-width: 600px;
+            margin: 0 auto 3rem;
+            font-weight: 300;
+        }
+
+        .hero-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .action-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 1.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .action-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(88, 166, 255, 0.5);
+            transform: translateY(-5px);
+        }
+
+        .card-icon {
+            font-size: 2rem;
+        }
+
+        .card-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .chat-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .chat-modal.open {
+            display: flex;
+        }
+
+        .chat-window {
+            background: rgba(10, 14, 26, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .message.user .avatar {
+            background: rgba(88, 166, 255, 0.2);
+        }
+
+        .message .content {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem 1.25rem;
+            border-radius: 16px;
+            max-width: 70%;
+        }
+
+        .message.user .content {
+            background: rgba(88, 166, 255, 0.15);
+        }
+
+        .message .content p {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .chat-input-area {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        #chatInput {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 0.875rem 1.25rem;
+            color: white;
+            outline: none;
+        }
+
+        #chatInput::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(88, 166, 255, 0.2);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .send-btn:hover {
+            background: rgba(88, 166, 255, 0.3);
+        }
+
+        section {
+            padding: 6rem 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 3rem;
+            letter-spacing: -1px;
+        }
+
+        .interface-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            backdrop-filter: blur(20px);
+        }
+
+        .record-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 0 auto 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .record-circle:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .record-circle.recording {
+            background: rgba(255, 51, 102, 0.3);
+            border-color: #ff3366;
+        }
+
+        .record-icon {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .record-circle.recording .record-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+        }
+
+        .waveform {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            margin: 2.5rem 0;
+        }
+
+        .bar {
+            width: 2px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            transition: all 0.15s ease;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2.5rem;
+        }
+
+        .control-btn {
+            padding: 0.7rem 2rem;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #fff;
+        }
+
+        .status {
+            margin-top: 2rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }
+
+        footer {
+            padding: 3rem 2rem;
+            text-align: center;
+            background: rgba(10, 14, 26, 0.5);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        footer p {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1.5rem 2rem;
+            }
+            .hero {
+                padding: 6rem 1.5rem 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">SANCIFEX</div>
+        <button class="menu-toggle" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </header>
+
+    <div class="drawer" id="drawer">
+        <nav>
+            <a href="#home">Home</a>
+            <a href="#voice">Voice Studio</a>
+            <a href="#about">About</a>
+        </nav>
+    </div>
+
+    <section class="hero" id="home">
+        <h1>
+            Your voice,<br>
+            <strong>infinitely reimagined</strong>
+        </h1>
+        <p>Record, clone, and bring voices to life with AI-powered precision</p>
+        
+        <div class="hero-actions">
+            <button class="action-card" onclick="openChat()">
+                <div class="card-icon">💬</div>
+                <div class="card-label">AI Chat</div>
+            </button>
+            <button class="action-card" onclick="scrollTo('#voice')">
+                <div class="card-icon">🎙️</div>
+                <div class="card-label">Voice Studio</div>
+            </button>
+            <button class="action-card" onclick="scrollTo('#voice')">
+                <div class="card-icon">🎭</div>
+                <div class="card-label">Avatar Clone</div>
+            </button>
+            <button class="action-card" onclick="scrollTo('#voice')">
+                <div class="card-icon">📝</div>
+                <div class="card-label">AI Bio</div>
+            </button>
+        </div>
+    </section>
+
+    <div class="chat-modal" id="chatModal">
+        <div class="chat-window">
+            <div class="chat-header">
+                <h3>AI Assistant</h3>
+                <button class="close-btn" onclick="closeChat()">×</button>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message ai">
+                    <div class="avatar">🤖</div>
+                    <div class="content">
+                        <p>Hello! How can I help you today?</p>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Message AI..." onkeypress="handleEnter(event)">
+                <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <section id="voice">
+        <div class="container">
+            <h2>Voice Studio</h2>
+            
+            <div class="interface-card">
+                <div class="record-circle" id="recordBtn" onclick="toggleRecord()">
+                    <div class="record-icon"></div>
+                </div>
+                
+                <div class="waveform" id="waveform"></div>
+
+                <div class="controls">
+                    <button class="control-btn" onclick="play()">Play</button>
+                    <button class="control-btn" onclick="clone()">Clone</button>
+                    <button class="control-btn" onclick="save()">Save</button>
+                </div>
+
+                <p class="status" id="status">Click to record • Free forever</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2026 Sancifex. Redefining voice technology.</p>
+    </footer>
+
+    <script>
+        let recording = false;
+        let waveInterval;
+
+        const waveform = document.getElementById('waveform');
+        for (let i = 0; i < 60; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            waveform.appendChild(bar);
+        }
+
+        function toggleMenu() {
+            document.getElementById('drawer').classList.toggle('open');
+            document.querySelector('.menu-toggle').classList.toggle('active');
+        }
+
+        function openChat() {
+            document.getElementById('chatModal').classList.add('open');
+        }
+
+        function closeChat() {
+            document.getElementById('chatModal').classList.remove('open');
+        }
+
+        function scrollTo(selector) {
+            document.querySelector(selector).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleRecord() {
+            const btn = document.getElementById('recordBtn');
+            const status = document.getElementById('status');
+            recording = !recording;
+            
+            if (recording) {
+                btn.classList.add('recording');
+                status.textContent = 'Recording...';
+                animateWave();
+            } else {
+                btn.classList.remove('recording');
+                status.textContent = 'Recording complete';
+                stopWave();
+            }
+        }
+
+        function animateWave() {
+            const bars = waveform.querySelectorAll('.bar');
+            waveInterval = setInterval(() => {
+                bars.forEach(bar => {
+                    bar.style.height = Math.random() * 50 + 4 + 'px';
+                    bar.style.background = 'rgba(255, 255, 255, 0.6)';
+                });
+            }, 100);
+        }
+
+        function stopWave() {
+            clearInterval(waveInterval);
+            waveform.querySelectorAll('.bar').forEach(bar => {
+                bar.style.height = '4px';
+                bar.style.background = 'rgba(255, 255, 255, 0.15)';
+            });
+        }
+
+        function play() {
+            document.getElementById('status').textContent = 'Playing...';
+        }
+
+        function clone() {
+            document.getElementById('status').textContent = 'Cloning voice...';
+        }
+
+        function save() {
+            document.getElementById('status').textContent = 'Saved';
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.innerHTML += `
+                <div class="message user">
+                    <div class="avatar">👤</div>
+                    <div class="content"><p>${msg}</p></div>
+                </div>
+                <div class="message ai">
+                    <div class="avatar">🤖</div>
+                    <div class="content"><p>I'm processing your request...</p></div>
+                </div>
+            `;
+            input.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+</html>
